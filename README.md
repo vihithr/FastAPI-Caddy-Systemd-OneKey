@@ -110,32 +110,32 @@ your-repo/
   README.md
 ```
 
-在本地初始化并推送到 GitHub（示例）：
+在本地初始化并推送到 GitHub（示例，本仓库已对应为 [`vihithr/FastAPI-Caddy-Systemd-OneKey`](https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey)）：
 
 ```bash
 git init
 git add .
 git commit -m "Add FastAPI + Caddy + Systemd deploy template"
 git branch -M main
-git remote add origin https://github.com/<your-name>/<your-repo>.git
+git remote add origin https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey.git
 git push -u origin main
 ```
 
 ### 2. 远程一键安装命令示例
 
-在服务器上执行（请根据你仓库的实际地址修改）：
+在服务器上执行（本仓库一键部署示例）：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<your-name>/<your-repo>/main/tools/fastapi_deploy.sh | \
+curl -fsSL https://raw.githubusercontent.com/vihithr/FastAPI-Caddy-Systemd-OneKey/main/fastapi_deploy.sh | \
   bash -s -- install \
-  --from-github https://github.com/<your-name>/<your-repo>.git \
+  --from-github https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey.git \
   --branch main \
   --domain example.com
 ```
 
-- `https://raw.githubusercontent.com/.../fastapi_deploy.sh`  
+- `https://raw.githubusercontent.com/vihithr/FastAPI-Caddy-Systemd-OneKey/main/fastapi_deploy.sh`  
   - 用于获取并执行部署脚本本身。
-- `--from-github https://github.com/<your-name>/<your-repo>.git`  
+- `--from-github https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey.git`  
   - 告诉脚本：**实际要部署的应用代码** 来自哪个仓库。
 - `--domain example.com`  
   - 使用域名 + HTTPS 模式，Caddy 会自动为 `example.com` 申请 TLS 证书。
@@ -143,9 +143,9 @@ curl -fsSL https://raw.githubusercontent.com/<your-name>/<your-repo>/main/tools/
 - 如果没有域名，可以改成：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<your-name>/<your-repo>/main/tools/fastapi_deploy.sh | \
+curl -fsSL https://raw.githubusercontent.com/vihithr/FastAPI-Caddy-Systemd-OneKey/main/fastapi_deploy.sh | \
   bash -s -- install \
-  --from-github https://github.com/<your-name>/<your-repo>.git \
+  --from-github https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey.git \
   --branch main \
   --ip
 ```
@@ -292,17 +292,17 @@ sudo bash /opt/fastapi_app/tools/fastapi_deploy.sh uninstall --force
 
 ## 下一步：上传到 GitHub
 
-在本目录（包含 `tools/` 与本 `README.md`）执行：
+在本目录（包含 `tools/` 与本 `README.md`）执行（本仓库已示范为 `vihithr/FastAPI-Caddy-Systemd-OneKey`）：
 
 ```bash
 git init
 git add .
 git commit -m "Initial commit: FastAPI + Caddy + Systemd deploy template"
 git branch -M main
-git remote add origin https://github.com/<your-name>/<your-repo>.git
+git remote add origin https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey.git
 git push -u origin main
 ```
 
-推送完成后，将上文中所有 `https://github.com/<your-name>/<your-repo>` 与 `raw.githubusercontent.com` 的占位符替换为你的真实仓库地址，即可在任意服务器上直接一键部署。
+推送完成后，你可以直接使用上文中以 `vihithr/FastAPI-Caddy-Systemd-OneKey` 为例的一键部署命令，在任意服务器上完成部署。
 
 
