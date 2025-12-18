@@ -1,0 +1,23 @@
+__DOMAIN__ {
+    reverse_proxy 127.0.0.1:__APP_PORT__ {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    encode gzip zstd
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output file /var/log/caddy/fastapi_app.log
+        format json
+    }
+}
+
+
