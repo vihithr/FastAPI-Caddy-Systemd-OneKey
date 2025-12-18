@@ -14,6 +14,71 @@
 
 ---
 
+## Quick Start：一条命令远程一键部署（推荐）
+
+在目标服务器上（Debian / Ubuntu 等），直接执行：
+
+### 无域名（HTTP，适合测试环境）
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vihithr/FastAPI-Caddy-Systemd-OneKey/main/fastapi_deploy.sh | \
+  bash -s -- install \
+  --from-github https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey.git \
+  --branch main \
+  --ip
+```
+
+### 有域名（HTTPS，自动证书）
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vihithr/FastAPI-Caddy-Systemd-OneKey/main/fastapi_deploy.sh | \
+  bash -s -- install \
+  --from-github https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey.git \
+  --branch main \
+  --domain your-domain.com
+```
+
+- 部署完成后：
+  - 应用服务：`fastapi_app.service`（监听 `0.0.0.0:8000`）
+  - 反向代理：`caddy`（IP 模式监听 `:80`，域名模式自动 HTTPS）
+
+---
+
+## 实测资源占用（Debian 12 小内存实例）
+
+在一台仅约 **512 MB 内存、无 Swap 的 Debian 12** 小机型上测试本模板，部署完成并启动 `fastapi_app` 与 `caddy` 后：
+
+- `fastapi_app.service`（Uvicorn + FastAPI）：
+  - 常驻内存约 **40–45 MB**（`RES`≈44 MB 左右）。
+- Caddy 进程：
+  - 常驻内存约 **25–30 MB**（多个 worker 进程合计）。
+- 整机占用示例（`free -m`）：
+  - 总内存：约 **451 MB**
+  - 已用：约 **180 MB**
+  - 可用：约 **270 MB**
+
+**结论**：在极小内存的 VPS（如 512 MB 级别）上，本模板依旧可以较为轻量地运行 FastAPI + Caddy + Systemd 的完整栈，适合作为低成本的 API / Demo 环境。
+
+---
+
+## 轻量级架构设计
+
+- **进程模型简单**：
+  - 仅包含一个由 Systemd 管理的 `uvicorn` 进程（FastAPI 应用）和一个 `caddy` 进程树（反向代理 / TLS）。
+  - 无 `docker`、`supervisor` 等额外守护进程，减少资源开销与排障复杂度。
+- **就地虚拟环境**：
+  - 在 `/opt/fastapi_app/venv` 下创建独立虚拟环境，不污染系统 Python。
+  - 所有依赖只对当前应用生效，卸载时可一次性删除整个目录。
+- **最小依赖栈**：
+  - 核心仅依赖：Python + Uvicorn + FastAPI + Caddy。
+  - 可选按需增加数据库、缓存等服务，但模板本身不强制绑定任何重型中间件。
+- **可复用工具目录**：
+  - 所有部署逻辑集中在 `tools/` 中，与业务代码解耦，可在多个项目间拷贝复用。
+
+整体设计目标是：**在极小资源下提供「够用且可维护」的生产级服务形态**，而不是追求堆栈复杂度。
+
+---
+
 ## 仓库结构
 
 - `tools/fastapi_deploy.sh`：主部署脚本（与业务无关，可复用）。
