@@ -12,6 +12,8 @@
 - 或者把 `tools/` 目录复制到任意 FastAPI 项目中，直接本地执行部署；
 - 也可以通过 GitHub Raw 链接实现真正意义上的 **一条命令远程部署**。
 
+想看实际运行效果？请参考 [FastAPI-Game-Rating-Lite](https://github.com/vihithr/FastAPI-Game-Rating-Lite)。
+
 ---
 
 ## Quick Start：一条命令远程一键部署（推荐）
