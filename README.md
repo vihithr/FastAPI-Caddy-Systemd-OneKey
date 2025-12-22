@@ -46,6 +46,58 @@ curl -fsSL https://raw.githubusercontent.com/vihithr/FastAPI-Caddy-Systemd-OneKe
 
 ---
 
+## Quick Start：从备份复制部署
+
+如果你已有备份文件，可以快速在新服务器上恢复部署：
+
+### 快速恢复步骤
+
+**1. 传输备份文件到新服务器：**
+
+```bash
+# 从本地或其他服务器传输备份文件
+scp fastapi_app_backup_*.tar.gz user@new-server:/tmp/
+```
+
+**2. 解压并部署：**
+
+```bash
+# 在新服务器上
+cd /tmp
+tar -xzf fastapi_app_backup_*.tar.gz
+cd fastapi_app  # 进入解压后的目录
+
+# 一键部署（IP 模式）
+sudo bash tools/fastapi_deploy.sh install --from-local --ip
+
+# 或使用域名模式
+sudo bash tools/fastapi_deploy.sh install --from-local --domain your-domain.com
+```
+
+**3. 恢复环境变量（如需要）：**
+
+```bash
+# 如果有备份的 .env 文件
+sudo cp /path/to/.env.backup /opt/fastapi_app/.env
+sudo chown fastapi:fastapi /opt/fastapi_app/.env
+sudo chmod 600 /opt/fastapi_app/.env
+sudo systemctl restart fastapi_app.service
+```
+
+**4. 验证部署：**
+
+```bash
+# 检查服务状态
+sudo systemctl status fastapi_app.service
+
+# 测试访问
+curl http://your-domain.com/health  # 或 http://server-ip/health
+```
+
+> 💡 **提示**：备份文件会自动排除虚拟环境、日志等环境相关文件，只包含业务代码和配置，因此恢复时会自动重建运行环境。
+
+---
+
 ## 实测资源占用（Debian 12 小内存实例）
 
 在一台仅约 **512 MB 内存、无 Swap 的 Debian 12** 小机型上测试本模板，部署完成并启动 `fastapi_app` 与 `caddy` 后：
@@ -103,6 +155,269 @@ curl -fsSL https://raw.githubusercontent.com/vihithr/FastAPI-Caddy-Systemd-OneKe
   - `python3`（>= 3.8）
   - 建议系统包：`python3-venv`
   - 脚本会按需尝试安装：`curl`、`git`（从 GitHub 拉代码时）、`unzip`（解压 zip 压缩包时）。
+
+---
+
+## 数据备份与迁移
+
+### 数据备份
+
+#### 方法一：使用脚本自动备份（推荐）
+
+脚本提供了便捷的备份功能，会自动排除环境相关文件（如 `venv`、`caddy`、`.env`、日志等），只备份业务代码和配置文件。
+
+**使用交互式菜单备份：**
+
+```bash
+bash /opt/fastapi_app/tools/fastapi_deploy.sh menu
+# 然后选择 "5) 备份"
+```
+
+备份功能会提示你输入备份文件保存路径，直接回车使用默认路径（`/opt/fastapi_app_backup_YYYYMMDD_HHMMSS.tar.gz`），或输入自定义路径。
+
+**备份内容包括：**
+- ✅ 应用代码（`app/` 目录）
+- ✅ 配置文件（`requirements.txt`、`tools/` 等）
+- ✅ 业务数据文件（如果存储在应用目录中）
+- ❌ 排除：虚拟环境（`venv/`）
+- ❌ 排除：Caddy 二进制文件（`caddy/`）
+- ❌ 排除：环境变量文件（`.env`）
+- ❌ 排除：日志文件（`*.log`）
+- ❌ 排除：缓存和临时文件
+
+#### 方法二：手动备份
+
+如果需要完整备份（包括数据库、配置文件等），可以手动执行：
+
+**1. 备份应用目录：**
+
+```bash
+# 创建备份目录
+sudo mkdir -p /backup/fastapi_app
+sudo chown $USER:$USER /backup/fastapi_app
+
+# 备份应用代码（排除环境文件）
+cd /opt
+sudo tar -czf /backup/fastapi_app/app_backup_$(date +%Y%m%d_%H%M%S).tar.gz \
+  --exclude=fastapi_app/venv \
+  --exclude=fastapi_app/caddy \
+  --exclude=fastapi_app/.env \
+  --exclude=fastapi_app/*.log \
+  --exclude=fastapi_app/__pycache__ \
+  fastapi_app
+```
+
+**2. 备份环境变量（重要）：**
+
+```bash
+# 备份 .env 文件（包含敏感信息，请妥善保管）
+sudo cp /opt/fastapi_app/.env /backup/fastapi_app/.env.backup
+```
+
+**3. 备份数据库（如果使用 SQLite）：**
+
+```bash
+# 如果应用使用 SQLite 数据库
+sudo cp /opt/fastapi_app/*.db /backup/fastapi_app/ 2>/dev/null || true
+sudo cp /opt/fastapi_app/*.sqlite* /backup/fastapi_app/ 2>/dev/null || true
+```
+
+**4. 备份 Systemd 服务配置：**
+
+```bash
+sudo cp /etc/systemd/system/fastapi_app.service /backup/fastapi_app/
+```
+
+**5. 备份 Caddy 配置（如果使用域名模式）：**
+
+```bash
+sudo cp /etc/caddy/Caddyfile /backup/fastapi_app/Caddyfile.backup
+```
+
+#### 数据库备份（PostgreSQL / MySQL）
+
+如果你的应用使用外部数据库（PostgreSQL、MySQL 等），需要单独备份：
+
+**PostgreSQL：**
+
+```bash
+# 备份整个数据库
+sudo -u postgres pg_dump -U postgres your_database_name > /backup/fastapi_app/db_backup_$(date +%Y%m%d_%H%M%S).sql
+
+# 或备份为压缩格式
+sudo -u postgres pg_dump -U postgres -Fc your_database_name > /backup/fastapi_app/db_backup_$(date +%Y%m%d_%H%M%S).dump
+```
+
+**MySQL：**
+
+```bash
+# 备份整个数据库
+mysqldump -u root -p your_database_name > /backup/fastapi_app/db_backup_$(date +%Y%m%d_%H%M%S).sql
+
+# 或备份为压缩格式
+mysqldump -u root -p your_database_name | gzip > /backup/fastapi_app/db_backup_$(date +%Y%m%d_%H%M%S).sql.gz
+```
+
+#### 备份文件传输
+
+备份完成后，建议将备份文件传输到安全位置（如本地电脑、云存储等）：
+
+```bash
+# 使用 SCP 传输到本地
+scp /backup/fastapi_app/*.tar.gz user@your-local-ip:/local/backup/path/
+
+# 或使用 rsync
+rsync -avz /backup/fastapi_app/ user@your-local-ip:/local/backup/path/
+```
+
+---
+
+### 数据迁移
+
+#### 从备份恢复应用
+
+**1. 传输备份文件到新服务器：**
+
+```bash
+# 在新服务器上，从本地传输备份文件
+scp fastapi_app_backup_*.tar.gz user@new-server:/tmp/
+```
+
+**2. 解压备份文件：**
+
+```bash
+# 在新服务器上
+cd /tmp
+tar -xzf fastapi_app_backup_*.tar.gz
+```
+
+**3. 进入解压后的目录并部署：**
+
+```bash
+cd fastapi_app  # 或解压后的目录名
+sudo bash tools/fastapi_deploy.sh install --from-local --ip
+# 或使用域名模式
+sudo bash tools/fastapi_deploy.sh install --from-local --domain your-domain.com
+```
+
+**4. 恢复环境变量（如果需要）：**
+
+```bash
+# 如果有备份的 .env 文件，复制到安装目录
+sudo cp /backup/fastapi_app/.env.backup /opt/fastapi_app/.env
+sudo chown fastapi:fastapi /opt/fastapi_app/.env
+sudo chmod 600 /opt/fastapi_app/.env
+```
+
+**5. 恢复数据库（如果使用外部数据库）：**
+
+**PostgreSQL：**
+
+```bash
+# 恢复数据库
+sudo -u postgres psql -U postgres -d your_database_name < /backup/fastapi_app/db_backup_*.sql
+
+# 或从压缩格式恢复
+sudo -u postgres pg_restore -U postgres -d your_database_name /backup/fastapi_app/db_backup_*.dump
+```
+
+**MySQL：**
+
+```bash
+# 恢复数据库
+mysql -u root -p your_database_name < /backup/fastapi_app/db_backup_*.sql
+
+# 或从压缩格式恢复
+gunzip < /backup/fastapi_app/db_backup_*.sql.gz | mysql -u root -p your_database_name
+```
+
+**6. 重启服务：**
+
+```bash
+sudo systemctl restart fastapi_app.service
+sudo systemctl restart caddy
+```
+
+#### 迁移到新服务器（完整流程）
+
+**步骤 1：在旧服务器上备份**
+
+```bash
+# 使用脚本备份
+bash /opt/fastapi_app/tools/fastapi_deploy.sh menu
+# 选择备份选项
+
+# 或手动完整备份
+sudo mkdir -p /backup/migration
+sudo bash /opt/fastapi_app/tools/fastapi_deploy.sh menu  # 选择备份
+# 备份数据库（如果使用）
+# 备份 .env 文件
+```
+
+**步骤 2：准备新服务器**
+
+- 确保新服务器满足运行环境要求（Python 3.8+、系统权限等）
+- 如果使用域名，确保 DNS 已指向新服务器 IP
+
+**步骤 3：传输备份文件**
+
+```bash
+# 从旧服务器传输到新服务器
+scp /opt/fastapi_app_backup_*.tar.gz user@new-server:/tmp/
+# 如果有数据库备份，也一并传输
+scp /backup/migration/*.sql user@new-server:/tmp/
+```
+
+**步骤 4：在新服务器上恢复**
+
+按照上面的"从备份恢复应用"步骤执行。
+
+**步骤 5：验证迁移**
+
+```bash
+# 检查服务状态
+sudo systemctl status fastapi_app.service
+sudo systemctl status caddy
+
+# 检查应用日志
+sudo journalctl -u fastapi_app.service -n 50
+
+# 测试访问
+curl http://your-domain.com/health  # 或 http://new-server-ip/health
+```
+
+#### 迁移注意事项
+
+⚠️ **重要提示：**
+
+1. **环境变量**：`.env` 文件包含敏感信息（如 `SECRET_KEY`），迁移时需要单独备份和恢复，不要丢失。
+
+2. **数据库连接**：如果应用使用外部数据库，迁移后需要更新数据库连接配置（在新服务器的 `.env` 文件中）。
+
+3. **文件权限**：确保恢复后的文件权限正确：
+   ```bash
+   sudo chown -R fastapi:fastapi /opt/fastapi_app
+   ```
+
+4. **端口冲突**：确保新服务器的 8000 端口（应用端口）和 80/443 端口（Caddy）未被占用。
+
+5. **域名 DNS**：如果使用域名模式，迁移前确保 DNS 已指向新服务器，避免证书申请失败。
+
+6. **依赖版本**：如果新服务器的 Python 版本或系统环境不同，可能需要重新安装依赖：
+   ```bash
+   cd /opt/fastapi_app
+   source venv/bin/activate
+   pip install -r requirements.txt --upgrade
+   ```
+
+7. **定期备份**：建议设置定时任务（cron）自动备份：
+   ```bash
+   # 编辑 crontab
+   sudo crontab -e
+   
+   # 添加每日备份（每天凌晨 2 点）
+   0 2 * * * bash /opt/fastapi_app/tools/fastapi_deploy.sh menu <<< "5"
+   ```
 
 ---
 
