@@ -686,5 +686,20 @@ git push -u origin main
 ```
 
 推送完成后，你可以直接使用上文中以 `vihithr/FastAPI-Caddy-Systemd-OneKey` 为例的一键部署命令，在任意服务器上完成部署。
+---
 
+## English
 
+A one-command deployment template for FastAPI on Debian/Ubuntu, built around **Caddy** and **systemd**.
+
+- `fastapi_deploy.sh` syncs the app, creates a virtualenv, installs dependencies, writes a systemd unit and configures Caddy (HTTP for an IP, automatic HTTPS for a domain).
+- Install directly on a server:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/vihithr/FastAPI-Caddy-Systemd-OneKey/main/fastapi_deploy.sh | \
+    bash -s -- install --from-github https://github.com/vihithr/FastAPI-Caddy-Systemd-OneKey.git --branch main --domain example.com
+  ```
+
+- Use `--ip` instead of `--domain` for HTTP-only testing.
+- The script also supports update, backup, restore and uninstall; the Chinese sections above contain the complete walkthrough.
+- Real-world deployment example: [FastAPI-Game-Rating-Lite](https://github.com/vihithr/FastAPI-Game-Rating-Lite).
